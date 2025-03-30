@@ -1,0 +1,17 @@
+allure-pytest
+pytest
+requests
+requests.auth
+pydantic
+email-validator
+python-dotenv
+fastapi~=0.115.11
+unicorn~=2.1.3
+fastapi-pagination
+pydantic~=2.10.6
+fastapi[standart]~=0.115.11
+pip~=24.1.2
+
+psycopg2-binary
+sqlalchemy
+sqlmodel
