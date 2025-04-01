@@ -1,11 +1,42 @@
 from http import HTTPStatus
-from app.database import users_db
+import logging
+from app.database import get_users
 from fastapi import APIRouter, HTTPException
 from fastapi_pagination import paginate, Page
+from pydantic import BaseModel
 
 from app.models.User import User
 
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/users")
+
+
+class UsersList(BaseModel):
+    data: list[User]
+
+
+@router.get("/users_all", summary='Просмотр данных всех пользователей', tags=['Admin'], status_code=HTTPStatus.OK)
+def get_all_users() -> UsersList:
+    users = get_users()
+    logger.debug(f"Retrieved {len(users)} users from database")
+    try:
+        response = UsersList(data=users)
+        logger.debug("Successfully created UsersList response")
+        return response
+    except Exception as e:
+        logger.error(f"Error creating UsersList: {str(e)}")
+        raise HTTPException(
+            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+            detail=f"Error processing users data: {str(e)}"
+        )
+
+
+@router.get("/", summary='Просмотр данных всех пользователей', tags=['Admin'], status_code=HTTPStatus.OK)
+def get_paginated_users() -> Page[User]:
+    return paginate(get_users())
 
 
 @router.get("/{user_id}", summary='Просмотр данных пользователя', tags=['Admin'], status_code=HTTPStatus.OK)
@@ -14,18 +45,9 @@ def get_user(user_id: int) -> User:
         raise HTTPException(
             status_code=HTTPStatus.UNPROCESSABLE_ENTITY, detail="Invalid user id")
 
-    user = next((user for user in users_db if user.id == user_id), None)
+    users = get_users()
+    user = next((user for user in users if user.id == user_id), None)
     if not user:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
                             detail="User not found")
     return user
-
-
-@router.get("/", summary='Просмотр данных всех пользователей', tags=['Admin'], status_code=HTTPStatus.OK)
-def get_users() -> Page[User]:
-    return paginate(users_db)
-
-
-@router.get("/users_all", summary='Просмотр данных всех пользователей', tags=['Admin'], status_code=HTTPStatus.OK)
-def get_all_users() -> list[User]:
-    return users_db

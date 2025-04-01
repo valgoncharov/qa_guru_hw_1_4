@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr, HttpUrl, ConfigDict
+from pydantic import BaseModel, EmailStr, HttpUrl, ConfigDict, Field
+from typing import Optional
 
 
 class UserBase(BaseModel):
@@ -6,6 +7,9 @@ class UserBase(BaseModel):
     first_name: str
     last_name: str
     job_title: str
+    avatar: HttpUrl
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserCreate(UserBase):
@@ -18,7 +22,6 @@ class UserUpdate(UserBase):
 
 class User(UserBase):
     id: int
-    avatar: HttpUrl
     model_config = ConfigDict(from_attributes=True)
 
 

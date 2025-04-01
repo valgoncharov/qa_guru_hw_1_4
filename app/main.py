@@ -1,9 +1,10 @@
 import json
 import uvicorn
+import os
 from fastapi_pagination import add_pagination
 from fastapi import FastAPI
-from routers import status, users
-from database import users_db
+from app.routers import status, users
+from app.database import set_users
 
 from app.models.User import User
 
@@ -15,10 +16,14 @@ app.include_router(users.router)
 
 
 def load_users():
-    global users_db
-    with open("../users.json") as f:
+    # Get the absolute path to users.json
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    users_file = os.path.join(os.path.dirname(current_dir), "users.json")
+
+    with open(users_file) as f:
         users_data = json.load(f)
-    users_db = [User.model_validate(user) for user in users_data]
+    users_list = [User.model_validate(user) for user in users_data]
+    set_users(users_list)
 
 
 @app.on_event("startup")
