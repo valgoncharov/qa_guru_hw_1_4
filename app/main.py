@@ -3,10 +3,14 @@ import uvicorn
 import os
 from fastapi_pagination import add_pagination
 from fastapi import FastAPI
+from app.database import create_db_and_tables, set_users, engine
 from app.routers import status, users
-from app.database import set_users
-
 from app.models.User import User
+import dotenv
+from sqlmodel import Session
+from sqlalchemy import text
+
+dotenv.load_dotenv()
 
 
 app = FastAPI()
@@ -22,12 +26,26 @@ def load_users():
 
     with open(users_file) as f:
         users_data = json.load(f)
-    users_list = [User.model_validate(user) for user in users_data]
+
+    # Create User instances without the id field
+    users_list = []
+    for user_data in users_data:
+        user_dict = {k: v for k, v in user_data.items() if k != 'id'}
+        users_list.append(User(**user_dict))
+
     set_users(users_list)
 
 
 @app.on_event("startup")
 async def startup_event():
+    # Create tables first
+    create_db_and_tables()
+
+    # Verify database connection
+    with Session(engine) as session:
+        session.exec(text("SELECT 1"))
+
+    # Then load users
     load_users()
 
 
