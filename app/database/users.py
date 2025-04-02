@@ -1,4 +1,6 @@
 from typing import Iterable
+from fastapi import HTTPException
+from fastapi.statuses import HTTPStatus
 
 from ..models.User import User
 from .engins import engine
@@ -33,8 +35,14 @@ def delete_user(user_id: int) -> None:
 
 def update_user(user_id: int, user: User) -> User:
     with Session(engine) as session:
-        user = session.get(User, user_id)
-        user.update(user)
+        existing_user = session.get(User, user_id)
+        if not existing_user:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND,
+                detail=f"User with id {user_id} not found"
+            )
+        for key, value in user.model_dump(exclude_unset=True).items():
+            setattr(existing_user, key, value)
         session.commit()
-        session.refresh(user)
-        return user
+        session.refresh(existing_user)
+        return existing_user

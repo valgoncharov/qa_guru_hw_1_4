@@ -9,9 +9,12 @@ DEFAULT_DATABASE_URL = "postgresql+psycopg2://postgres:example@localhost:5432/po
 # Get database URL from environment or use default
 database_url = os.getenv("DATABASE_ENGINE", DEFAULT_DATABASE_URL)
 
+# Convert pool_size to integer
+pool_size = int(os.getenv("DATABASE_POOL_SIZE", "10"))
+
 # Create engine with the database URL
 engine = create_engine(database_url,
-                       pool_size=os.getenv("DATABASE_POOL_SIZE", 10))
+                       pool_size=pool_size)
 
 
 def create_db_and_tables():
