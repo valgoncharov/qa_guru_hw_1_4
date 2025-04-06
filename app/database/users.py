@@ -1,7 +1,6 @@
 from typing import Iterable
 from fastapi import HTTPException
-from fastapi.statuses import HTTPStatus
-
+from fastapi import status
 from ..models.User import User
 from .engins import engine
 from sqlmodel import Session, select
@@ -38,7 +37,7 @@ def update_user(user_id: int, user: User) -> User:
         existing_user = session.get(User, user_id)
         if not existing_user:
             raise HTTPException(
-                status_code=HTTPStatus.NOT_FOUND,
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"User with id {user_id} not found"
             )
         for key, value in user.model_dump(exclude_unset=True).items():

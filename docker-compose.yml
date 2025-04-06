@@ -2,6 +2,13 @@
 version: '3.9'
 
 services:
+  app:
+    # image: qa-guru-app
+    build: .
+    environment:
+      DATABASE_ENGINE: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_USER}
+    ports:
+      - 8002:80
 
   db:
     image: postgres
@@ -15,6 +22,7 @@ services:
     #    tmpfs:
     #      size: 134217728 # 128*2^20 bytes = 128Mb
     environment:
+      POSTGRES_USER:
       POSTGRES_PASSWORD: example
     volumes:
       - db_data:/var/lib/postgresql/data

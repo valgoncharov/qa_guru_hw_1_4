@@ -1,8 +1,10 @@
 from http import HTTPStatus
 import logging
+from typing import Dict
+
 from app.database import users
 from app.database.users import get_users, get_user, create_user, update_user, delete_user
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from fastapi_pagination import paginate, Page
 from pydantic import BaseModel
 
@@ -30,7 +32,7 @@ def get_all_users() -> UsersList:
     except Exception as e:
         logger.error(f"Error creating UsersList: {str(e)}")
         raise HTTPException(
-            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Error processing users data: {str(e)}"
         )
 
@@ -44,12 +46,12 @@ def get_paginated_users() -> Page[User]:
 def get_user(user_id: int) -> User:
     if user_id < 1:
         raise HTTPException(
-            status_code=HTTPStatus.UNPROCESSABLE_ENTITY, detail="Invalid user id")
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid user id")
 
     users = get_users()
     user = next((user for user in users if user.id == user_id), None)
     if not user:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND,
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="User not found")
     return user
 
@@ -71,10 +73,10 @@ def update_user(user_id: int, user: UserUpdate) -> User:
 
 
 @router.delete("/{user_id}", summary='Удаление пользователя', tags=['Admin'], status_code=HTTPStatus.NO_CONTENT)
-def delete_user(user_id: int) -> None:
+def delete_user(user_id: int):
     if user_id < 1:
         raise HTTPException(
-            status_code=HTTPStatus.UNPROCESSABLE_ENTITY, detail="Invalid user id")
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid user id")
 
     # Check if user exists before deletion
     users_list = get_users()
@@ -82,7 +84,7 @@ def delete_user(user_id: int) -> None:
 
     if not user:
         raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id {user_id} not found or already deleted"
         )
 
