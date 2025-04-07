@@ -45,3 +45,4 @@ def set_users(users: list[User]) -> None:
         for user in users:
             session.add(user)
         session.commit()
+
