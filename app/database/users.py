@@ -45,3 +45,4 @@ def update_user(user_id: int, user: User) -> User:
         session.commit()
         session.refresh(existing_user)
         return existing_user
+
