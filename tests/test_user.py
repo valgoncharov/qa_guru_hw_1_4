@@ -1,7 +1,6 @@
 from http import HTTPStatus
 
 import pytest
-import requests
 from app.models.User import User, UserCreate
 from random import randint
 from fastapi_pagination import Page
@@ -11,8 +10,8 @@ fake = Faker()
 
 
 @pytest.fixture
-def users(app_url: str):
-    response = requests.get(f"{app_url}/users")
+def users(users_api):
+    response = users_api.get_users()
     assert response.status_code == HTTPStatus.OK
     return response.json()["items"]
 
@@ -29,8 +28,8 @@ def fake_user_data():
 
 
 @pytest.fixture
-def created_user(app_url: str, fake_user_data):
-    response = requests.post(f"{app_url}/users/", json=fake_user_data)
+def created_user(users_api, fake_user_data):
+    response = users_api.create_user(json=fake_user_data)
     assert response.status_code == HTTPStatus.CREATED
     user = response.json()
     return user["id"]
@@ -60,14 +59,14 @@ def empty_user_data():
 
 class TestUserData:
     @pytest.mark.parametrize("user_id", [1, 6, 14])
-    def test_get_user_by_id(self, app_url: str, user_id: int):
-        response = requests.get(f"{app_url}/users/{user_id}")
+    def test_get_user_by_id(self, users_api, user_id: int):
+        response = users_api.session.get(f"/users/{user_id}")
         assert response.status_code == HTTPStatus.OK
         user = response.json()
         User.model_validate(user)
 
-    def test_get_all_users(self, app_url: str):
-        response = requests.get(f"{app_url}/users")
+    def test_get_all_users(self, users_api):
+        response = users_api.get_users()
         assert response.status_code == HTTPStatus.OK
         users_data = response.json()
         Page[User].model_validate(users_data)
@@ -77,26 +76,26 @@ class TestUserData:
         assert len(users_id) == len(set(users_id))
 
     @pytest.mark.parametrize("user_id", [15, 111])
-    def test_nonexistent_user(self, app_url: str, user_id: int):
-        response = requests.get(f"{app_url}/users/{user_id}")
+    def test_nonexistent_user(self, users_api, user_id: int):
+        response = users_api.session.get(f"/users/{user_id}")
         assert response.status_code == HTTPStatus.NOT_FOUND
 
     @pytest.mark.parametrize("user_id", ["str", 0, -1, 1.1, " "])
-    def test_user_invalid_id_type(self, app_url: str, user_id):
-        response = requests.get(f"{app_url}/users/{user_id}")
+    def test_user_invalid_id_type(self, users_api, user_id):
+        response = users_api.session.get(f"/users/{user_id}")
         assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
 
-    def test_random_user(self, app_url: str):
+    def test_random_user(self, users_api):
         user_id = randint(1, 13)
-        response = requests.get(f"{app_url}/users/{user_id}")
+        response = users_api.session.get(f"/users/{user_id}")
         assert response.status_code == HTTPStatus.OK
         user = response.json()
         User.model_validate(user)
 
 
 class TestCRUD:
-    def test_post_create_user(self, app_url: str, fake_user_data):
-        response = requests.post(f"{app_url}/users/", json=fake_user_data)
+    def test_post_create_user(self, users_api, fake_user_data):
+        response = users_api.create_user(json=fake_user_data)
         assert response.status_code == HTTPStatus.CREATED
         created_user = response.json()
 
@@ -108,7 +107,7 @@ class TestCRUD:
         assert "id" in created_user
         assert created_user["id"] is not None
 
-    def test_post_create_user_not_valid(self, app_url: str):
+    def test_post_create_user_not_valid(self, users_api):
         invalid_users = [
             {
                 "first_name": fake.first_name(),
@@ -119,13 +118,13 @@ class TestCRUD:
         ]
 
         for invalid_user in invalid_users:
-            response = requests.post(f"{app_url}/users/", json=invalid_user)
+            response = users_api.create_user(json=invalid_user)
             assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, \
                 f"Expected 422 for invalid user data: {invalid_user}"
 
-    def test_update_user(self, app_url, created_user, updated_user_data):
-        response = requests.patch(
-            f"{app_url}/users/{created_user}", json=updated_user_data)
+    def test_update_user(self, users_api, created_user, updated_user_data):
+        response = users_api.session.patch(
+            f"/users/{created_user}", json=updated_user_data)
 
         assert response.status_code == HTTPStatus.OK
         updated_user = response.json()
@@ -137,37 +136,36 @@ class TestCRUD:
         assert updated_user["job_title"] == updated_user_data["job_title"]
         assert updated_user["avatar"] == updated_user_data["avatar"]
 
-    def test_update_not_exsist_user(self, app_url, updated_user_data):
+    def test_update_not_exsist_user(self, users_api, updated_user_data):
         non_existent_id = 99999
-        response = requests.patch(
-            f"{app_url}/users/{non_existent_id}", json=updated_user_data)
+        response = users_api.session.patch(
+            f"/users/{non_existent_id}", json=updated_user_data)
 
         assert response.status_code == HTTPStatus.NOT_FOUND, \
             f"Пользователь 404 не найден: {non_existent_id}"
 
-    def test_update_empty_data(self, app_url: str, created_user, empty_user_data):
-        response = requests.patch(
-            f"{app_url}/users/{created_user}", json=empty_user_data)
+    def test_update_empty_data(self, users_api, created_user, empty_user_data):
+        response = users_api.session.patch(
+            f"/users/{created_user}", json=empty_user_data)
 
         assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, \
             "Expected 422 for empty fields in update data"
 
-    def test_delete_user(self, app_url: str, created_user):
-        response = requests.delete(f"{app_url}/users/{created_user}")
+    def test_delete_user(self, users_api, created_user):
+        response = users_api.delete_user(user_id=created_user)
         assert response.status_code == HTTPStatus.NO_CONTENT, \
             f"Ожидаем 204 успешное удаление, статус {response.status_code}"
 
-        get_response = requests.get(f"{app_url}/users/{created_user}")
+        get_response = users_api.session.get(f"/users/{created_user}")
         assert get_response.status_code == HTTPStatus.NOT_FOUND, \
             "Проверяем, что пользователя нет"
 
-    def test_delete_deleted_user(self, app_url: str, created_user):
-        delete_response = requests.delete(f"{app_url}/users/{created_user}")
+    def test_delete_deleted_user(self, users_api, created_user):
+        delete_response = users_api.delete_user(user_id=created_user)
         assert delete_response.status_code == HTTPStatus.NO_CONTENT, \
             "Удалили первый раз"
 
-        second_delete_response = requests.delete(
-            f"{app_url}/users/{created_user}")
+        second_delete_response = users_api.delete_user(user_id=created_user)
         assert second_delete_response.status_code == HTTPStatus.NOT_FOUND, \
             "Повторное удаление получаем 404"
 
@@ -180,13 +178,11 @@ class TestCRUD:
         (None, "None value"),
         (-999999, "Large negative number")
     ])
-    def test_delete_not_valid_user(self, app_url: str, invalid_id, description: str):
-        response = requests.delete(f"{app_url}/users/{invalid_id}")
+    def test_delete_not_valid_user(self, users_api, invalid_id, description: str):
+        response = users_api.session.delete(f"/users/{invalid_id}")
         assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY, \
             f"Expected 422 for {description} ({invalid_id}), got {response.status_code}"
 
 # - Тест на post: создание. Предусловия: подготовленные тестовые данные (fake)
-
 # - Тест на delete: удаление. Предусловия: созданный пользователь
-
 # - Тест на patch: изменение. Предусловия: созданный пользователь

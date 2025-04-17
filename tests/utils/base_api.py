@@ -1,15 +1,29 @@
 from typing import Optional
 
 import requests
+from requests import Session
+from .config import Server
+
+
+class BaseSession(Session):
+    def __init__(self, **kwargs):
+        super().__init__()
+        self.base_url = kwargs.get('base_url', None)
+        self.headers.update({
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        })
+
+    def request(self, method, url, **kwargs):
+        if self.base_url and not url.startswith(('http://', 'https://')):
+            url = f"{self.base_url}{url}"
+        return super().request(method, url, **kwargs)
 
 
 class BaseApi:
     def __init__(self, env: str):
-        self.base_url = {
-            "prod": "https://api.prod.example.com",
-            "stage": "https://api.stage.example.com",
-            "dev": "https://api.dev.example.com"
-        }.get(env, "https://api.dev.example.com")  # по умолчанию dev
+        # Пробрасываем из конфига
+        self.base_url = Server(env).app
         self.session = requests.Session()
         self.session.headers.update({
             "Content-Type": "application/json",

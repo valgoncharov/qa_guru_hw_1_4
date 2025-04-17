@@ -1,19 +1,16 @@
 import pytest
 from http import HTTPStatus
-import requests
-from random import randint
 from typing import Dict, Any
 import math
+from random import randint
 
 
-def test_default_page_size(app_url: str) -> None:
+def test_default_page_size(users_api) -> None:
     """
     Проверить, что размер страницы по возвращает ожидаемое
     количество элементов и соответствует общему количеству.
-        app_url: Главный URL приложения
-
     """
-    response = requests.get(f"{app_url}/users")
+    response = users_api.get_users()
     assert response.status_code == HTTPStatus.OK
 
     result: Dict[str, Any] = response.json()
@@ -24,15 +21,12 @@ def test_default_page_size(app_url: str) -> None:
 
 
 @pytest.mark.parametrize('size', [1, 3, 5])
-def test_custom_page_size(app_url: str, size: int) -> None:
+def test_custom_page_size(users_api, size: int) -> None:
     """
     Проверить пагинацию с разными размерами страниц.
-        app_url: Главный URL приложения
         size: Количество элементов на странице
-
     """
-    response = requests.get(
-        f"{app_url}/users", params={'page': 1, 'size': size})
+    response = users_api.get_users(params={'page': 1, 'size': size})
     assert response.status_code == HTTPStatus.OK
 
     result: Dict[str, Any] = response.json()
@@ -44,13 +38,12 @@ def test_custom_page_size(app_url: str, size: int) -> None:
     assert result['total'] > 0, "Общее количество элементов должно быть больше 0"
 
 
-def test_random_page_size(app_url: str) -> None:
+def test_random_page_size(users_api) -> None:
     """
     Проверить пагинацию с различным указанием страниц
-        app_url: Главный URL приложения
     """
     size: int = randint(1, 13)
-    response = requests.get(f"{app_url}/users", params={"size": size})
+    response = users_api.get_users(params={"size": size})
     assert response.status_code == HTTPStatus.OK
 
     result: Dict[str, Any] = response.json()
@@ -59,14 +52,13 @@ def test_random_page_size(app_url: str) -> None:
 
 
 @pytest.mark.parametrize('size', [1, 3, 5])
-def test_total_pages_count(app_url: str, size: int) -> None:
+def test_total_pages_count(users_api, size: int) -> None:
     """
     Проверить правильное количество страниц при разных значениях size.
-        app_url: Главный URL приложения
         size: Количество элементов на странице
     """
     # Получаем общее количество элементов
-    response = requests.get(f"{app_url}/users", params={'size': size})
+    response = users_api.get_users(params={'size': size})
     assert response.status_code == HTTPStatus.OK
 
     result: Dict[str, Any] = response.json()
@@ -81,15 +73,13 @@ def test_total_pages_count(app_url: str, size: int) -> None:
 
 
 @pytest.mark.parametrize('page', [1, 2, 3])
-def test_page_navigation(app_url: str, page: int) -> None:
+def test_page_navigation(users_api, page: int) -> None:
     """
     Проверить навигацию по разным страницам.
-        app_url: Главный URL приложения
         page: Номер страницы
     """
     # Получаем данные для текущей страницы
-    response = requests.get(
-        f"{app_url}/users", params={"page": page, "size": 5})
+    response = users_api.get_users(params={"page": page, "size": 5})
     assert response.status_code == HTTPStatus.OK
 
     result: Dict[str, Any] = response.json()
@@ -107,19 +97,16 @@ def test_page_navigation(app_url: str, page: int) -> None:
         f"Количество страниц должно быть {expected_pages}"
 
 
-def test_different_data_on_different_pages(app_url: str) -> None:
+def test_different_data_on_different_pages(users_api) -> None:
     """
     Проверить, что на разных страницах возвращаются разные данные.
-        app_url: Главный URL приложения
     """
     # Получаем данные первой страницы
-    response_page1 = requests.get(
-        f"{app_url}/users", params={"page": 1, "size": 5})
+    response_page1 = users_api.get_users(params={"page": 1, "size": 5})
     assert response_page1.status_code == HTTPStatus.OK
 
     # Получаем данные второй страницы
-    response_page2 = requests.get(
-        f"{app_url}/users", params={"page": 2, "size": 5})
+    response_page2 = users_api.get_users(params={"page": 2, "size": 5})
     assert response_page2.status_code == HTTPStatus.OK
 
     page1_data: Dict[str, Any] = response_page1.json()

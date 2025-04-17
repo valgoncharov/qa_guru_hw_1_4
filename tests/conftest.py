@@ -2,6 +2,8 @@ import os
 
 import dotenv
 import pytest
+from .utils.users_api import UsersApi
+from .utils.config import Server
 
 
 def pytest_addoption(parser):
@@ -21,9 +23,10 @@ def envs():
 
 @pytest.fixture(scope="session")
 def app_url(env) -> str:
-    env_urls = {
-        "prod": "https://api.prod.example.com",
-        "stage": "https://api.stage.example.com",
-        "dev": "https://api.dev.example.com"
-    }
-    return env_urls.get(env, env_urls["dev"])
+    # Используем из конфига
+    return Server(env).app
+
+
+@pytest.fixture(scope='function')
+def users_api(env: str):
+    return UsersApi(env)

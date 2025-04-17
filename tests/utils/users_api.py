@@ -1,6 +1,8 @@
 from typing import Optional, Dict, Any
 
 from .base_api import BaseApi
+from .base_api import BaseSession
+from .config import Server
 
 
 class UsersApi(BaseApi):
@@ -26,3 +28,20 @@ class UsersApi(BaseApi):
 
     def delete_user(self, user_id: int) -> None:
         self._delete(f"{self.base_path}/{user_id}")
+
+
+class UsersApi:
+    def __init__(self, env: str):
+        self.session = BaseSession(base_url=Server(env).app)
+
+    def get_users(self, params: Optional[dict] = None):
+        return self.session.get("/users", params=params)
+    
+    def create_user(self, json: Optional[dict] = None):
+        return self.session.post("/users", json=json)
+    
+    def update_user(self, user_id: str, json: Optional[dict] = None):
+        return self.session.put(f"/users/{user_id}", json=json)
+    
+    def delete_user(self, user_id: str):
+        return self.session.delete(f"/users/{user_id}")
